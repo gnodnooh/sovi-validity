@@ -9,8 +9,8 @@ import os
 import pandas as pd
 import pysal as ps
 import numpy as np
-@TODO: Finish Doc strings
-@TODO: Cleanup file
+#@TODO: Finish Doc strings
+#@TODO: Cleanup file
 
 
 pd.set_option("chained_assignment", None)
@@ -135,7 +135,11 @@ se_cols = [i for i in db.columns if i[-1] == 's' and i[0] == 'A']
 db[se_cols] *= (1.65 / 1.645)
 
 # calculate weights matrix
-w = ps.queen_from_shapefile(os.path.join(spath, 'USA_Counties_500k.shp'),
+# =============================================================================
+# w = ps.queen_from_shapefile(os.path.join(spath, 'USA_Counties_500k.shp'),
+#                             idVariable='geoFIPS')
+# =============================================================================
+w = ps.lib.weights.Queen.from_shapefile(os.path.join(spath, 'USA_Counties_500k.shp'),
                             idVariable='geoFIPS')
 w.transform = 'R'
 
@@ -257,7 +261,10 @@ db1['POPDENS'] = db.ACS12_5yr_B01003001 / (db.SE_T02A_002 * 1.)
 # if no home value, assign the spatial lag of the estimate and SE
 homeval = db1['MHSEVAL_ALT'].copy()
 homeval_se = db.ACS12_5yr_B25077001s.copy()
-dbf = ps.open(os.path.join(spath, 'USA_Counties_500k.dbf'))
+# =============================================================================
+# dbf = ps.open(os.path.join(spath, 'USA_Counties_500k.dbf'))
+# =============================================================================
+dbf = ps.lib.io.open(os.path.join(spath, 'USA_Counties_500k.dbf'))
 
 # Rename dbf GEOIDs to match homeval
 geoid = dbf.by_col('geoFIPS')
@@ -265,8 +272,13 @@ geoid = dbf.by_col('geoFIPS')
 shp_fips = pd.DataFrame(dbf.by_col('geoFIPS'), index=geoid)
 shp_fips = shp_fips.join(homeval)
 shp_fips = shp_fips.join(homeval_se)
-shp_fips['MHSEVAL_ALT_LAG'] = ps.lag_spatial(w, shp_fips.MHSEVAL_ALT)
-shp_fips['MHSEVAL_ALT_LAG_SE'] = ps.lag_spatial(w, shp_fips.ACS12_5yr_B25077001s)
+# =============================================================================
+# shp_fips['MHSEVAL_ALT_LAG'] = ps.lag_spatial(w, shp_fips.MHSEVAL_ALT)
+# shp_fips['MHSEVAL_ALT_LAG_SE'] = ps.lag_spatial(w, shp_fips.ACS12_5yr_B25077001s)
+# =============================================================================
+shp_fips['MHSEVAL_ALT_LAG'] = ps.lib.weights.spatial_lag.lag_spatial(w, shp_fips.MHSEVAL_ALT)
+shp_fips['MHSEVAL_ALT_LAG_SE'] = ps.lib.weights.spatial_lag.lag_spatial(w, shp_fips.ACS12_5yr_B25077001s)
+
 
 mh = shp_fips.ix[shp_fips.MHSEVAL_ALT_LAG == 0].MHSEVAL_ALT.tolist()
 
